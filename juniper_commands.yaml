@@ -1,0 +1,248 @@
+# juniper_commands.yaml
+# Juniper show commands knowledge base for network analysis
+
+command_categories:
+  
+  bgp_evpn:
+    description: "BGP and EVPN control plane analysis"
+    use_cases: ["evpn health", "bgp status", "control plane", "peering issues", "route distribution"]
+    device_targets: ["spine", "leaf"]
+    commands:
+      - command: "show bgp summary"
+        description: "BGP session overview and peer status"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show bgp neighbor"
+        description: "Detailed BGP neighbor information"
+        priority: 2
+        expected_devices: ["spine", "leaf"]
+      - command: "show route table bgp.evpn.0"
+        description: "EVPN routes in BGP table"
+        priority: 1
+        expected_devices: ["spine"]
+      - command: "show route table bgp.evpn.0 terse"
+        description: "EVPN routes summary"
+        priority: 1
+        expected_devices: ["spine"]
+      - command: "show evpn database"
+        description: "EVPN database entries"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show evpn instance"
+        description: "EVPN instance status"
+        priority: 2
+        expected_devices: ["leaf"]
+      - command: "show evpn instance extensive"
+        description: "Detailed EVPN instance information"
+        priority: 3
+        expected_devices: ["leaf"]
+
+  interfaces:
+    description: "Interface status, statistics and troubleshooting"
+    use_cases: ["interface down", "link issues", "performance problems", "connectivity", "physical layer"]
+    device_targets: ["spine", "leaf", "border"]
+    commands:
+      - command: "show interfaces terse"
+        description: "Interface status summary"
+        priority: 1
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show interfaces extensive"
+        description: "Detailed interface information and statistics"
+        priority: 2
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show interfaces diagnostics optics"
+        description: "Optical interface diagnostics"
+        priority: 3
+        expected_devices: ["spine", "leaf"]
+      - command: "show lacp interfaces"
+        description: "LACP status and member links"
+        priority: 2
+        expected_devices: ["spine", "leaf"]
+      - command: "show ethernet-switching interfaces"
+        description: "Ethernet switching interface status"
+        priority: 2
+        expected_devices: ["leaf"]
+
+  routing:
+    description: "Routing table analysis and protocol status"
+    use_cases: ["routing issues", "missing routes", "protocol problems", "convergence", "reachability"]
+    device_targets: ["spine", "leaf"]
+    commands:
+      - command: "show route summary"
+        description: "Routing table summary by protocol"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show route protocol bgp"
+        description: "BGP learned routes"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show route protocol isis"
+        description: "ISIS learned routes"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show isis adjacency"
+        description: "ISIS neighbor adjacencies"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show isis database"
+        description: "ISIS link state database"
+        priority: 2
+        expected_devices: ["spine", "leaf"]
+      - command: "show route table inet.0"
+        description: "IPv4 unicast routing table"
+        priority: 2
+        expected_devices: ["spine", "leaf"]
+
+  system_health:
+    description: "System health, hardware status and alarms"
+    use_cases: ["system health", "hardware issues", "alarms", "performance", "troubleshooting"]
+    device_targets: ["spine", "leaf", "border"]
+    commands:
+      - command: "show version"
+        description: "Software version and system information"
+        priority: 1
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show chassis hardware"
+        description: "Hardware inventory and status"
+        priority: 1
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show system alarms"
+        description: "Active system alarms"
+        priority: 1
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show system uptime"
+        description: "System uptime and boot information"
+        priority: 2
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show chassis environment"
+        description: "Environmental status (temperature, fans, power)"
+        priority: 2
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show system processes"
+        description: "System process status and resource usage"
+        priority: 3
+        expected_devices: ["spine", "leaf", "border"]
+
+  switching:
+    description: "Layer 2 switching, VLANs and MAC learning"
+    use_cases: ["switching issues", "vlan problems", "mac learning", "flooding", "layer 2"]
+    device_targets: ["leaf"]
+    commands:
+      - command: "show ethernet-switching table"
+        description: "MAC address table"
+        priority: 1
+        expected_devices: ["leaf"]
+      - command: "show vlans"
+        description: "VLAN configuration and status"
+        priority: 1
+        expected_devices: ["leaf"]
+      - command: "show ethernet-switching interfaces"
+        description: "Switching interface configuration"
+        priority: 2
+        expected_devices: ["leaf"]
+      - command: "show spanning-tree bridge"
+        description: "Spanning tree protocol status"
+        priority: 2
+        expected_devices: ["leaf"]
+
+  multicast:
+    description: "Multicast routing and IGMP/PIM analysis"
+    use_cases: ["multicast issues", "igmp problems", "pim adjacencies", "multicast routing"]
+    device_targets: ["spine", "leaf"]
+    commands:
+      - command: "show igmp interface"
+        description: "IGMP interface status"
+        priority: 1
+        expected_devices: ["leaf"]
+      - command: "show pim neighbors"
+        description: "PIM neighbor adjacencies"
+        priority: 1
+        expected_devices: ["spine", "leaf"]
+      - command: "show multicast route"
+        description: "Multicast routing table"
+        priority: 2
+        expected_devices: ["spine", "leaf"]
+
+  security:
+    description: "Security policies, firewall and access control"
+    use_cases: ["security issues", "firewall problems", "access control", "authentication"]
+    device_targets: ["border", "leaf"]
+    commands:
+      - command: "show security policies"
+        description: "Security policy configuration"
+        priority: 1
+        expected_devices: ["border"]
+      - command: "show security flow session"
+        description: "Active security flow sessions"
+        priority: 2
+        expected_devices: ["border"]
+
+  performance:
+    description: "Performance monitoring and statistics"
+    use_cases: ["performance issues", "utilization", "bandwidth", "latency", "monitoring"]
+    device_targets: ["spine", "leaf", "border"]
+    commands:
+      - command: "show interfaces statistics"
+        description: "Interface traffic statistics"
+        priority: 1
+        expected_devices: ["spine", "leaf", "border"]
+      - command: "show system statistics"
+        description: "System performance statistics"
+        priority: 2
+        expected_devices: ["spine", "leaf", "border"]
+
+# Analysis templates - predefined command sets for common troubleshooting scenarios
+analysis_templates:
+  
+  evpn_health_check:
+    name: "EVPN Control Plane Health Check"
+    description: "Comprehensive EVPN fabric health analysis"
+    target_roles: ["spine"]
+    commands:
+      - "show bgp summary"
+      - "show route table bgp.evpn.0 terse"
+      - "show evpn database"
+    max_devices: 5
+
+  connectivity_diagnosis:
+    name: "Connectivity Issue Diagnosis"
+    description: "Diagnose connectivity problems between devices"
+    target_roles: ["spine", "leaf"]
+    commands:
+      - "show interfaces terse"
+      - "show bgp summary"
+      - "show isis adjacency"
+      - "show route summary"
+    max_devices: 10
+
+  fabric_health_overview:
+    name: "Complete Fabric Health Overview"
+    description: "Overall fabric health check"
+    target_roles: ["spine", "leaf"]
+    commands:
+      - "show system alarms"
+      - "show interfaces terse"
+      - "show bgp summary"
+      - "show isis adjacency"
+    max_devices: 15
+
+  interface_troubleshooting:
+    name: "Interface Troubleshooting"
+    description: "Detailed interface analysis for problem resolution"
+    target_roles: ["spine", "leaf"]
+    commands:
+      - "show interfaces extensive"
+      - "show interfaces diagnostics optics"
+      - "show lacp interfaces"
+    max_devices: 8
+
+  routing_convergence_check:
+    name: "Routing Convergence Analysis"
+    description: "Check routing protocol convergence and table consistency"
+    target_roles: ["spine", "leaf"]
+    commands:
+      - "show route summary"
+      - "show isis adjacency"
+      - "show isis database"
+      - "show route protocol isis"
+    max_devices: 10

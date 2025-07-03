@@ -1,0 +1,358 @@
+openapi: 3.0.3
+info:
+  title: AOS
+  version: 6.0.0
+  description: AOS REST API
+servers:
+  - url: https://localhost
+components:
+  securitySchemes:
+    APIKeyHeader:
+      type: apiKey
+      in: header
+      name: AUTHTOKEN
+security:
+  - APIKeyHeader: []
+paths:
+  /api/blueprints:
+    get:
+      summary: Retrieve a comprehensive list of all deployed data centre blueprints with key operational insights.
+      description: This operation allows an AI agent to obtain a list of all active network blueprints instantiated within the Apstra system. Each blueprint represents a complete, real-time running data centre deployment, derived from a design template. The primary purpose for an LLM is to acquire the unique identifier (ID) for each blueprint, which is essential for subsequent API calls targeting specific deployments, or for presenting a list of available data centres to a user. The response for each blueprint includes not only its unique ID but also a rich digest of its design and operational state. This digest encompasses critical metadata such as the number of VRFs (referred to as 'security zones'), the type of fabric connectivity design (e.g., 'l3clos'), and counts of various network components like leaf switches ('leaf_count'), spine switches ('spine_count'), and superspine switches ('superspine_count'). It also provides statistics on connected elements like generic servers ('generic_count') and external systems for connectivity ('external_router_count'). Crucially, the digest also reports 'anomaly_counts', which indicate deviations from the intended network design as defined in Apstra's Single Source of Truth (SSOT). These anomalies highlight real-time issues within the data centre fabric, such as interface, probe, or BGP anomalies. An LLM can use this comprehensive digest to quickly assess the status and characteristics of all deployed data centres, aiding in diagnostic queries or high-level network overview requests from users.
+        - blueprints
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint was removed during processing
+  /api/blueprints/{blueprint_id}:
+    get:
+      summary: Retrieve the full, detailed graph database representation and metadata for a specific live data 
+        centre blueprint.
+      description: >
+        This operation provides an AI agent with the entire structured configuration and operational state of a specific, active Juniper Apstra data centre blueprint. It is designed for deep inspection and analysis of a network's intent and deployed state. The blueprint's data is fundamentally stored and returned as a graph database structure, comprising 'nodes' and 'relationships'.
+        'Nodes' represent individual logical or physical elements within the data centre. These can include a wide array of network components such as switches (e.g., leaf, spine), virtual networks (VNs), security zones (VRFs), interfaces (e.g., 'ge-0/0/0', 'irb.101'), or even external systems and servers. Each node contains granular configuration details and properties relevant to its type, such as IP addresses, VLANs, interface speeds, operational states, and device-specific attributes. For example, a node representing a 'rack' might contain nested details about its associated generic systems (servers) and their links.
+        'Relationships' define how these nodes are interconnected and logically associated within the data centre fabric. They represent crucial links, dependencies, or policy enforcements between different network objects, such as 'spine_leaf' connections between switches, 'to_generic' links between switches and servers, or 'member_interfaces' associating an interface with a virtual network. Understanding these relationships is vital for an LLM to comprehend network topology, data flow, and inter-component dependencies.
+        The response also includes comprehensive metadata about the blueprint itself, beyond the high-level digest available from the /api/blueprints endpoint. This deep dataset allows an LLM to retrieve any configuration data present in the data centre fabric. It can be used to correlate information across different objects, such as identifying all IP addresses associated with a particular switch, understanding the exact connections between two network devices, or diagnosing specific configuration details. Due to its comprehensive nature, the information returned will require the LLM to parse the complex JSON structure to extract specific details.
+      tags:
+        - blueprints
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: The unique string identifier for the specific data centre blueprint whose detailed configuration and graph data are to be retrieved. This ID should typically be obtained from a prior call to the '/api/blueprints' endpoint or provided by the user when referencing a known blueprint.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint with given ID not found
+  /api/blueprints/{blueprint_id}/nodes:
+    get:
+      summary: Get graph nodes
+      description: Returns all nodes in the blueprint. Each node may have additional design specific properties.
+      tags:
+        - blueprints
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: ID of the blueprint
+          required: true
+          schema:
+            type: string
+        - name: node_type
+          in: query
+          description: Return only nodes of this type
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint with given ID not found
+  /api/blueprints/{blueprint_id}/nodes/{node_id}:
+    get:
+      summary: Get graph node
+      description: Returns specific node in blueprint.
+      tags:
+        - blueprints
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: ID of the blueprint
+          required: true
+          schema:
+            type: string
+        - name: node_id
+          in: path
+          description: ID of the node
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint or node with given ID not found
+  /api/blueprints/{blueprint_id}/relationships/{relationship_id}:
+    get:
+      summary: Get graph relationship
+      description: Returns specific relationship in the blueprint.
+      tags:
+        - blueprints
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: ID of the blueprint
+          required: true
+          schema:
+            type: string
+        - name: relationship_id
+          in: path
+          description: ID of the relationship
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint or relationship with given ID not found
+  /api/blueprints/{blueprint_id}/errors:
+    get:
+      summary: Get blueprint validation errors
+      description: Returns validation errors separately for nodes and relationships together with its version.
+      tags:
+        - blueprints
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: ID of the blueprint
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint with given ID not found
+  /api/blueprints/{blueprint_id}/meta/errors:
+    get:
+      summary: Get blueprint validation errors meta
+      description: Returns the version of blueprint errors. If currently known version of errors is less than the one returned by this API, new call to `/errors` should be issued to get the latest errors.
+      tags:
+        - blueprints
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: ID of the blueprint
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Everything works as expected
+          content:
+            application/json: {}
+        '404':
+          description: Blueprint with given ID not found
+  /api/user/login:
+    post:
+      summary: Authenticate given user
+      description: >
+        After posting a user's valid credentials to this endpoint, a token is returned
+        that can be used for future API requests by putting it in the header 'AuthToken'.
+      tags:
+        - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            # schema can be omitted or defined if you wish
+            {}
+      responses:
+        '201':
+          description: Successfully authenticated user
+          content:
+            application/json: {}
+        '401':
+          description: Unmapped group-role for remote user; invalid credentials
+        '408':
+          description: Connection timeout
+      deprecated: true
+  /api/aaa/login:
+    post:
+      summary: Authenticate given user
+      description: >
+        After posting a user's valid credentials to this endpoint, a token is returned
+        that can be used for future API requests by putting it in the header 'AuthToken'.
+      tags:
+        - aaa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            {}
+      responses:
+        '201':
+          description: Successfully authenticated user
+          content:
+            application/json: {}
+        '401':
+          description: Unmapped group-role for remote user; invalid credentials
+        '408':
+          description: Connection timeout
+
+  /api/user/logout:
+    post:
+      summary: Log out
+      description: >
+        This method logs out the authenticated user by invalidating their session.
+        The AuthToken used becomes invalid and cannot be reused.
+      tags:
+        - user
+      responses:
+        '200':
+          description: Everything works as expected
+      deprecated: true
+
+  /api/aaa/logout:
+    post:
+      summary: Log out
+      description: >
+        This method logs out the authenticated user by invalidating their session.
+        The AuthToken used becomes invalid and cannot be reused.
+      tags:
+        - aaa
+      responses:
+        '200':
+          description: Everything works as expected
+
+  /api/telemetry/fetchcmd:
+    post:
+      summary: Execute a command on a network device
+      description: >
+        Submit a show command to be executed on a specific network device.
+        This is an asynchronous operation that returns a request_id which must be used 
+        to poll for the command results. The system_id can be obtained from the blueprint nodes.
+      tags:
+        - telemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system_id:
+                  type: string
+                  description: The system ID of the target device (from blueprint nodes)
+                  example: "525400AFC169"
+                command_text:
+                  type: string
+                  description: The Juniper show command to execute
+                  example: "show version"
+                output_format:
+                  type: string
+                  enum: ["text", "json", "xml"]
+                  default: "text"
+                  description: Format for command output
+              required:
+                - system_id
+                - command_text
+      responses:
+        '201':
+          description: Command submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  request_id:
+                    type: string
+                    description: Unique identifier to poll for command results
+        '400':
+          description: Invalid request or device not accessible
+
+  /api/telemetry/fetchcmd/{request_id}:
+    get:
+      summary: Retrieve the results of a previously submitted command
+      description: >
+        Poll for the results of a command execution. The command may still be running
+        (404 response) or completed (200 response with results). Include keep=true 
+        parameter to prevent automatic cleanup of the result.
+      tags:
+        - telemetry
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The request ID returned from the command submission
+        - name: keep
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Keep the result cached after retrieval
+      responses:
+        '200':
+          description: Command completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    enum: ["success", "error"]
+                  output:
+                    type: string
+                    description: The command output from the device
+                  error:
+                    type: string
+                    description: Error message if command failed
+        '404':
+          description: Command still running or request ID not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Response not found for request 'abc123'"
+    delete:
+      summary: Clean up a command result from the server cache
+      description: >
+        Delete the cached result of a command execution to free up server resources.
+        This should be called after retrieving the command results to clean up.
+      tags:
+        - telemetry
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The request ID to clean up
+      responses:
+        '200':
+          description: Result cleaned up successfully
+        '404':
+          description: Request ID not found or already cleaned up
