@@ -26,6 +26,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint was removed during processing
+  
   /api/blueprints/{blueprint_id}:
     get:
       summary: Retrieve the full, detailed graph database representation and metadata for a specific live data 
@@ -51,6 +52,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint with given ID not found
+  
   /api/blueprints/{blueprint_id}/nodes:
     get:
       summary: Get graph nodes
@@ -77,6 +79,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint with given ID not found
+  
   /api/blueprints/{blueprint_id}/nodes/{node_id}:
     get:
       summary: Get graph node
@@ -103,6 +106,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint or node with given ID not found
+  
   /api/blueprints/{blueprint_id}/relationships/{relationship_id}:
     get:
       summary: Get graph relationship
@@ -129,6 +133,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint or relationship with given ID not found
+  
   /api/blueprints/{blueprint_id}/errors:
     get:
       summary: Get blueprint validation errors
@@ -149,6 +154,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint with given ID not found
+  
   /api/blueprints/{blueprint_id}/meta/errors:
     get:
       summary: Get blueprint validation errors meta
@@ -169,6 +175,7 @@ paths:
             application/json: {}
         '404':
           description: Blueprint with given ID not found
+  
   /api/user/login:
     post:
       summary: Authenticate given user
@@ -193,6 +200,7 @@ paths:
         '408':
           description: Connection timeout
       deprecated: true
+  
   /api/aaa/login:
     post:
       summary: Authenticate given user
@@ -356,3 +364,505 @@ paths:
           description: Result cleaned up successfully
         '404':
           description: Request ID not found or already cleaned up
+
+  /api/anomalies:
+      get:
+        summary: Retrieve comprehensive network anomaly data from across all data centre blueprints with detailed contextual information for diagnostic analysis.
+        description: >
+          This operation provides an AI agent with a comprehensive view of all network anomalies detected across the entire Apstra system, spanning multiple data centre blueprints. The endpoint is specifically designed to enable intelligent anomaly analysis, pattern recognition, and operational troubleshooting assistance. Unlike blueprint-specific endpoints, this provides a global perspective on network health issues.
+          The response contains detailed anomaly records, each representing a deviation from expected network behaviour or configuration. Anomalies are categorised into distinct types that help an LLM understand the nature of the issue: 'probe' anomalies indicate performance or operational thresholds have been exceeded (such as interface counter hot/cold violations, BGP session issues, or device temperature warnings); 'interface' anomalies signal physical or logical interface state mismatches (expected 'up' but actually 'down'); 'mac' anomalies identify MAC address behaviour issues like excessive flapping or unexpected movement patterns; and additional types may include BGP, LLDP, or protocol-specific violations.
+          
+          Each anomaly record includes critical diagnostic information: a unique identifier for tracking and correlation purposes; severity classification ('critical', 'major', 'minor') indicating operational impact; timestamp data showing when the anomaly was last observed, enabling trend analysis; 'actual' and 'expected' value pairs that clearly define what was observed versus what should be happening; detailed identity information including system IDs (linking to specific network devices), interface names, VLAN IDs, MAC addresses, or other contextual identifiers; and rich property sets that provide additional context such as link roles ('spine_leaf'), probe types, or configuration parameters.
+        
+          The probe-based anomalies include specific stage information and predefined probe names that help identify the exact monitoring mechanism that detected the issue. For example, 'fabric_hotcold_ifcounter' probes monitor interface utilisation patterns, while 'evpn_host_flapping' probes detect excessive EVPN endpoint movement. This granular information enables an LLM to provide precise diagnostic guidance and correlate related issues across the fabric.
+          
+          Interface anomalies include role information ('to_generic' indicating server connections, 'spine_leaf' for fabric links) and specific interface identifiers, making it possible to understand the topology context of the failure. MAC anomalies provide movement patterns, including flap counts and intervals, which are essential for diagnosing network loops, misconfigurations, or hardware issues.
+          
+          The default response limit is 10,000 entries to balance comprehensive coverage with system performance. For an LLM, this dataset enables sophisticated analysis including: identifying systemic issues affecting multiple devices; correlating related anomalies that might indicate root causes; prioritising responses based on severity and affected infrastructure; providing contextual explanations of what each anomaly means in operational terms; and suggesting diagnostic steps or remediation approaches based on anomaly patterns and network topology understanding.
+
+          This global anomaly view is particularly valuable for proactive network operations, trend analysis, and providing users with comprehensive health assessments that span their entire data centre infrastructure.
+        tags:
+          - anomalies
+        parameters:
+          - name: limit
+            in: query
+            description: Maximum number of anomaly records to return. Defaults to 10,000 entries to provide comprehensive coverage while maintaining system performance. Reduce this value for faster responses when analysing specific anomaly subsets.
+            required: false
+            schema:
+              type: integer
+              default: 10000
+              minimum: 1
+              maximum: 50000
+          - name: severity
+            in: query
+            description: Filter anomalies by severity level. Accepts 'critical', 'major', 'minor' to focus analysis on specific impact levels. Critical anomalies typically indicate service-affecting issues, while minor anomalies may represent performance degradation or early warning indicators.
+            required: false
+            schema:
+              type: string
+              enum: ["critical", "major", "minor"]
+          - name: anomaly_type
+            in: query
+            description: Filter by specific anomaly category. Use 'probe' for performance and threshold violations, 'interface' for connectivity issues, 'mac' for MAC address behaviour problems, or other protocol-specific types to focus diagnostic efforts.
+            required: false
+            schema:
+              type: string
+              enum: ["probe", "interface", "mac", "bgp", "lldp"]
+          - name: system_id
+            in: query
+            description: Filter anomalies to a specific network device using its system identifier. Useful for device-focused troubleshooting or when correlating issues with specific hardware. System IDs can be obtained from blueprint node data.
+            required: false
+            schema:
+              type: string
+        responses:
+          '200':
+            description: Anomaly data retrieved successfully with comprehensive diagnostic information
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    items:
+                      type: array
+                      description: Array of anomaly records with full diagnostic context
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: Unique anomaly identifier for tracking and correlation
+                          anomaly_type:
+                            type: string
+                            description: Category of anomaly (probe, interface, mac, bgp, lldp)
+                          severity:
+                            type: string
+                            description: Impact classification (critical, major, minor)
+                          last_modified_at:
+                            type: string
+                            format: date-time
+                            description: Timestamp when anomaly was last observed or updated
+                          actual:
+                            type: object
+                            description: Current observed values or state
+                          expected:
+                            type: object
+                            description: Expected values or state according to design intent
+                          anomalous:
+                            type: object
+                            description: Specific anomalous conditions or thresholds
+                          identity:
+                            type: object
+                            description: Contextual identifiers including system_id, interface, VLAN, MAC address
+                          role:
+                            type: string
+                            description: Network role context (spine_leaf, to_generic, etc.)
+                    count:
+                      type: integer
+                      description: Total number of anomalies returned in this response
+          '400':
+            description: Invalid filter parameters or request format
+          '401':
+            description: Authentication required - invalid or missing AuthToken
+          '500':
+            description: Internal server error while retrieving anomaly data
+  
+  /api/blueprints/{blueprint_id}/probes/{probe_id}/query:
+    get:
+      summary: Retrieve detailed probe stage data and time-series telemetry for specific monitoring probes within a data centre blueprint.
+      description: >
+        This operation provides an AI agent with comprehensive access to probe execution data and telemetry within a specific data centre blueprint. Probes in Apstra are intelligent monitoring mechanisms that continuously assess network health, performance, and compliance against design intent. This endpoint enables deep diagnostic analysis by exposing the granular data that drives anomaly detection and network insights.
+        
+        Probes operate through multiple stages, each collecting specific metrics or performing particular checks. For example, a 'fabric_hotcold_ifcounter' probe might have stages for collecting interface statistics, calculating utilisation ratios, and determining if thresholds are exceeded. Each stage produces a series of data points with timestamps, values, and rich contextual properties that identify the specific network element being monitored.
+        
+        The response structure provides 'items' as an array of data points, each representing a probe measurement or evaluation result. These items include critical diagnostic information: unique identifiers for correlation and tracking; timestamps showing when measurements were taken; actual measured or calculated values; 'properties' objects containing contextual identifiers such as system IDs (linking to specific devices), interface names, link roles (spine_leaf, to_generic), VLAN IDs, or other relevant network identifiers that help understand what was being monitored.
+        
+        The endpoint supports sophisticated filtering capabilities through the 'filter' parameter, which accepts arbitrary expressions to narrow results based on specific criteria. This enables an LLM to focus on particular devices, interfaces, time periods, or value ranges. The 'order_by' parameter provides sorting control for chronological analysis or value-based ranking. Most importantly for diagnostic workflows, the 'anomalous_only' parameter restricts results to only those data points that have triggered anomaly conditions, enabling focused troubleshooting.
+        
+        For comprehensive analysis, the 'include_stage' parameter allows correlation across multiple probe stages, providing parent or sibling stage context that helps understand the complete monitoring picture. This is essential when probe stages build upon each other or when related measurements need to be analysed together.
+        
+        Time-series capabilities are enabled through 'begin_time' and 'end_time' parameters, which unlock historical trend analysis. When combined with the 'aggregation' parameter, this provides powerful analytical capabilities for identifying patterns, performance trends, or intermittent issues. The 'metrics' parameter allows specification of aggregation types (sum, average, maximum, minimum) for different values and stages, enabling sophisticated statistical analysis.
+        
+        For large datasets, the endpoint implements intelligent paging and caching mechanisms. Paging can be controlled by page size and number, or by time intervals for chronological data retrieval. Caching options include configurable timeout values for performance optimisation and explicit cache clearing for real-time analysis requirements.
+        
+        This probe query capability is particularly valuable for an LLM because it provides the underlying data behind anomaly detection, enabling root cause analysis, trend identification, and predictive insights. It bridges the gap between high-level anomaly alerts and the detailed measurements that triggered them, supporting comprehensive diagnostic explanations and troubleshooting guidance.
+      tags:
+        - probes
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: The unique identifier of the data centre blueprint containing the probe to be queried. This should be obtained from the '/api/blueprints' endpoint or provided by users referencing specific deployments.
+          required: true
+          schema:
+            type: string
+        - name: probe_id
+          in: path
+          description: The unique identifier of the specific probe whose stage data is being requested. Probe IDs can be discovered through blueprint analysis or anomaly correlation. Each probe represents a particular monitoring function or health check within the network fabric.
+          required: true
+          schema:
+            type: string
+        - name: stage
+          in: query
+          description: The specific stage within the probe to query. Stages represent different phases or aspects of the monitoring process. If not specified, the endpoint returns data from the probe's primary or default stage.
+          required: false
+          schema:
+            type: string
+        - name: include_stage
+          in: query
+          description: Comma-separated list of additional stage names to include in the response for correlation analysis. This extends series items with data from preceding, parent, or sibling stages, enabling comprehensive multi-stage analysis of related monitoring data.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: false
+        - name: filter
+          in: query
+          description: Arbitrary expression for filtering probe series data. Supports complex queries to focus on specific devices, interfaces, value ranges, or time periods. Use syntax like 'system_id=="525400AFC169"' or 'value>10' to narrow results for targeted analysis.
+          required: false
+          schema:
+            type: string
+        - name: order_by
+          in: query
+          description: Sorting specification for the returned data series. Use field names like 'timestamp', 'value', or property names to control result ordering. Append ':desc' for descending order. Essential for chronological analysis or value-based ranking.
+          required: false
+          schema:
+            type: string
+        - name: anomalous_only
+          in: query
+          description: When set to true, returns only those series items that have triggered anomaly conditions. This focuses the response on problematic measurements, enabling efficient troubleshooting workflows and diagnostic analysis.
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: begin_time
+          in: query
+          description: Start timestamp for time-series data retrieval (ISO 8601 format). When specified with end_time, enables historical analysis and trend identification. Essential for understanding performance patterns over time or correlating events with specific incidents.
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: End timestamp for time-series data retrieval (ISO 8601 format). Must be used with begin_time to define the analysis time window. Enables focused examination of specific time periods or incident timeframes.
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: aggregation
+          in: query
+          description: Time period for data aggregation when retrieving historical samples. Specify values like '1h', '5m', '1d' to control granularity. Larger periods reduce data volume while maintaining trend visibility for long-term analysis.
+          required: false
+          schema:
+            type: object
+            properties:
+              period:
+                type: string
+                description: Aggregation time period (e.g., '1h', '5m', '1d')
+        - name: metrics
+          in: query
+          description: Specification of aggregation types to apply to different values and stages. Allows sophisticated statistical analysis by defining how data should be summarised (sum, average, maximum, minimum) for each metric type.
+          required: false
+          schema:
+            type: object
+            description: Mapping of metrics to aggregation types for each stage
+        - name: paging
+          in: query
+          description: Pagination configuration for large datasets. Control data retrieval through page_size and page_number for amount-based paging, or use time intervals for chronological pagination. Essential for managing large historical datasets.
+          required: false
+          schema:
+            type: object
+            properties:
+              page_size:
+                type: integer
+                minimum: 1
+                maximum: 100000
+                default: 1000
+                description: Number of items per page
+              page_number:
+                type: integer
+                minimum: 1
+                default: 1
+                description: Page number to retrieve (1-based)
+        - name: caching
+          in: query
+          description: Cache control for improved performance on subsequent requests. Configure timeout for automatic cache expiration or explicitly clear cache for real-time analysis. Particularly useful when retrieving large historical datasets across multiple requests.
+          required: false
+          schema:
+            type: object
+            properties:
+              timeout:
+                type: integer
+                minimum: 10
+                default: 60
+                description: Cache timeout in seconds for automatic expiration
+              clear:
+                type: boolean
+                default: false
+                description: Explicitly clear the cache before processing request
+      responses:
+        '200':
+          description: Probe stage data retrieved successfully with comprehensive telemetry and contextual information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    type: string
+                    description: Human-readable description of the probe stage and its purpose
+                  type:
+                    type: string
+                    description: Data structure type (typically 'table' for series data)
+                  items:
+                    type: array
+                    description: Array of probe measurement data points with full diagnostic context
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Unique identifier for this measurement within the probe stage
+                        timestamp:
+                          type: string
+                          format: date-time
+                          description: When this measurement was taken or calculated
+                        value:
+                          type: string
+                          description: The measured or calculated value (may be numeric, boolean, or text)
+                        dse_time:
+                          type: number
+                          description: Internal system time reference for correlation
+                        properties:
+                          type: object
+                          description: Contextual identifiers and metadata for this measurement
+                          properties:
+                            system_id:
+                              type: string
+                              description: Network device identifier where measurement was taken
+                            interface:
+                              type: string
+                              description: Specific interface name if measurement is interface-related
+                            link_role:
+                              type: string
+                              description: Role context (spine_leaf, to_generic, etc.)
+                  offset:
+                    type: integer
+                    description: Starting position in the complete dataset (for pagination)
+                  page:
+                    type: integer
+                    description: Current page number in paginated results
+                  per_page:
+                    type: integer
+                    description: Number of items per page in pagination
+                  total_count:
+                    type: integer
+                    description: Total number of items available across all pages
+        '400':
+          description: Invalid query parameters, filter expressions, or pagination settings
+        '404':
+          description: Blueprint or probe with specified ID not found, or requested stage does not exist
+        '401':
+          description: Authentication required - invalid or missing AuthToken
+        '500':
+          description: Internal server error while executing probe query or retrieving telemetry data
+
+  /api/blueprints/{blueprint_id}/configuration:
+    get:
+      summary: Retrieve comprehensive configuration deployment status and device-level deployment details for a specific data centre blueprint.
+      description: >
+        This operation provides an AI agent with complete visibility into the configuration deployment state of a data centre blueprint, essential for understanding whether the intended network design has been successfully applied to all physical devices. In Apstra's intent-based networking model, this endpoint bridges the gap between design intent and actual device configuration, making it crucial for operational validation and troubleshooting.
+        
+        Configuration deployment in Apstra occurs through multiple phases and configuration types that serve different purposes within the network fabric. The 'service_config' type represents the primary network services configuration including routing protocols, VLANs, VRFs, and connectivity policies that deliver the core networking functionality. The 'drain_config' type manages graceful device maintenance procedures, allowing devices to be safely removed from service without disrupting network operations. The 'discovery2_config' type handles device discovery and initial provisioning processes that bring new devices into the fabric management.
+        
+        The response provides both high-level blueprint status and granular per-device deployment information. The overall blueprint state indicates whether all configurations have been successfully deployed ('succeeded'), are currently being applied ('pending'), or have encountered issues ('failed'). This global state gives immediate insight into whether the network is operating according to its designed intent.
+        
+        Device-level status information is particularly valuable for diagnostic analysis. Each device entry includes its unique system identifier for correlation with other network data, current deployment state, configuration type being processed, deployment stage (such as 'apply', 'validate', or 'rollback'), and detailed error messages when issues occur. The timestamp information enables tracking of deployment timing and identifying when configuration changes were last applied.
+        
+        The 'config_mismatch' array is especially important for operational health assessment. When populated, it identifies devices where the running configuration differs from the intended configuration, indicating potential configuration drift, incomplete deployments, or manual changes that deviate from the design intent. Each mismatch entry includes the device identifier, system ID for correlation, and timestamp of when the mismatch was detected, enabling focused remediation efforts.
+        
+        Deployment status counters provide quantitative insight into the deployment pipeline. For each configuration type (service, drain, discovery), the response shows counts of succeeded, failed, and pending deployments. This statistical view enables an LLM to quickly assess deployment health and identify systematic issues affecting multiple devices or configuration types.
+        
+        This endpoint is particularly valuable for an LLM because it enables assessment of network operational readiness, identification of devices requiring attention, correlation of configuration issues with network anomalies, and provision of deployment status explanations to users. The combination of global status and device-specific details supports both high-level health reporting and detailed troubleshooting workflows.
+        
+        Understanding configuration deployment status is essential for interpreting other network data, as many operational issues can be traced to incomplete or failed configuration deployments. This endpoint provides the foundation for determining whether observed network behaviour aligns with intended design.
+      tags:
+        - configuration
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: The unique identifier of the data centre blueprint whose configuration deployment status is being requested. This should be obtained from the '/api/blueprints' endpoint or provided by users when referencing specific network deployments.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuration deployment status retrieved successfully with comprehensive device-level details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The blueprint identifier, confirming which deployment is being reported
+                  total_devices:
+                    type: integer
+                    description: Total number of devices in the blueprint requiring configuration deployment
+                  config_mismatch:
+                    type: array
+                    description: Devices where running configuration differs from intended configuration, indicating configuration drift or deployment issues
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Device identifier for the mismatched device
+                        system_id:
+                          type: string
+                          description: System identifier for correlation with other network data
+                        config_mismatched_since:
+                          type: string
+                          format: date-time
+                          description: Timestamp when the configuration mismatch was first detected
+                  state:
+                    type: string
+                    enum: ["succeeded", "failed", "pending", "in_progress"]
+                    description: Overall deployment status for the entire blueprint - succeeded indicates all devices configured successfully
+                  device_status:
+                    type: array
+                    description: Detailed deployment status for each individual device in the blueprint
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Device identifier for tracking and correlation
+                        system_id:
+                          type: string
+                          description: System identifier linking to device data in other endpoints
+                        state:
+                          type: string
+                          enum: ["succeeded", "failed", "pending", "in_progress"]
+                          description: Current deployment state for this specific device
+                        config_type:
+                          type: string
+                          enum: ["service", "drain", "discovery2"]
+                          description: Type of configuration being deployed - service for network functionality, drain for maintenance, discovery2 for provisioning
+                        deploy_stage:
+                          type: string
+                          description: Current stage of deployment process (apply, validate, rollback, etc.)
+                        error_message:
+                          type: string
+                          description: Detailed error information if deployment failed, empty string if successful
+                        last_modified_at:
+                          type: string
+                          format: date-time
+                          description: Timestamp of the most recent deployment activity for this device
+                  last_modified_at:
+                    type: string
+                    format: date-time
+                    description: Timestamp of the most recent deployment activity across the entire blueprint
+                  deployment_status:
+                    type: object
+                    description: Statistical summary of deployment success and failure counts by configuration type
+                    properties:
+                      drain_config:
+                        type: object
+                        description: Deployment statistics for maintenance drain configurations
+                        properties:
+                          num_succeeded:
+                            type: integer
+                            description: Number of devices with successful drain configuration deployment
+                          num_failed:
+                            type: integer
+                            description: Number of devices with failed drain configuration deployment
+                          num_pending:
+                            type: integer
+                            description: Number of devices with pending drain configuration deployment
+                      service_config:
+                        type: object
+                        description: Deployment statistics for primary service configurations
+                        properties:
+                          num_succeeded:
+                            type: integer
+                            description: Number of devices with successful service configuration deployment
+                          num_failed:
+                            type: integer
+                            description: Number of devices with failed service configuration deployment
+                          num_pending:
+                            type: integer
+                            description: Number of devices with pending service configuration deployment
+                      discovery2_config:
+                        type: object
+                        description: Deployment statistics for device discovery and provisioning configurations
+                        properties:
+                          num_succeeded:
+                            type: integer
+                            description: Number of devices with successful discovery configuration deployment
+                          num_failed:
+                            type: integer
+                            description: Number of devices with failed discovery configuration deployment
+                          num_pending:
+                            type: integer
+                            description: Number of devices with pending discovery configuration deployment
+        '404':
+          description: Blueprint with specified ID not found or does not exist
+        '401':
+          description: Authentication required - invalid or missing AuthToken
+        '500':
+          description: Internal server error while retrieving configuration deployment status
+  
+  /api/blueprints/{}/systems/{system_id}/config-rendering:
+    get:
+      summary: Retrieve the complete rendered device configuration for a specific network device within a data centre blueprint.
+      description: >
+        This operation provides an AI agent with the full, rendered configuration that Apstra has generated for a specific network device. This represents the complete translation from high-level design intent into device-specific configuration syntax, typically in Juniper configuration format. This endpoint is essential for deep configuration analysis, troubleshooting deployment issues, and understanding how intent-based design translates to actual device commands.
+      
+        The rendered configuration represents the authoritative configuration that Apstra believes should be running on the device to implement the blueprint's design intent. This includes all aspects of network functionality: interface configurations with descriptions, IP addresses, and operational parameters; routing protocol configurations including BGP sessions, OSPF areas, and policy definitions; VLAN and VXLAN configurations for Layer 2 connectivity; VRF (Virtual Routing and Forwarding) instances for network segmentation; EVPN (Ethernet VPN) configurations for overlay networking; security policies and access controls; and system-level settings like hostname, management interfaces, and operational parameters.
+        
+        The configuration output includes both Apstra-generated configuration and any custom configlets that have been applied to extend or modify the base configuration. The boundary between these sections is clearly marked, with configlets appearing after a "------BEGIN SECTION CONFIGLETS------" delimiter. This separation enables an LLM to distinguish between intent-driven configuration and custom additions, which is crucial for understanding configuration sources and potential conflicts.
+        
+        For troubleshooting purposes, this rendered configuration is invaluable because it shows exactly what Apstra intends to deploy to the device. When compared with the actual running configuration on the device (obtainable through device command execution), discrepancies can identify configuration drift, deployment failures, or manual changes that deviate from design intent. The configuration also provides context for understanding anomalies, as many network issues can be traced to specific configuration elements or missing configuration sections.
+        
+        The configuration structure reflects the device vendor's native syntax (typically Junos for Juniper devices), making it directly usable for device operations, configuration validation, or manual intervention when necessary. An LLM can parse this configuration to extract specific settings, explain configuration logic to users, identify potential issues, or correlate configuration elements with observed network behaviour.
+        
+        Configuration analysis capabilities enabled by this endpoint include: validating that intended design elements are properly configured; identifying missing or incorrect configuration sections; explaining complex configuration relationships to users in plain language; correlating configuration settings with network anomalies or performance issues; and providing specific configuration guidance for troubleshooting or optimisation.
+        
+        This endpoint is particularly valuable when combined with other Apstra data sources, as it provides the configuration foundation that underlies network topology, routing behaviour, and service delivery. Understanding the rendered configuration is essential for comprehensive network analysis and effective troubleshooting guidance.
+      tags:
+        - configuration
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: The unique identifier of the data centre blueprint containing the target device. This should be obtained from the '/api/blueprints' endpoint or provided by users when referencing specific network deployments.
+          required: true
+          schema:
+            type: string
+        - name: system_id
+          in: path
+          description: The unique system identifier (typically device serial number) of the specific network device whose configuration is being requested. System IDs can be discovered through blueprint node analysis or device status endpoints. Each system ID corresponds to a physical network device within the blueprint.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device configuration rendered successfully with complete intent-based settings and configlets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config:
+                    type: string
+                    description: >
+                      The complete rendered configuration for the device in native vendor syntax (typically Junos format). 
+                      This includes all intent-based configuration generated by Apstra to implement the blueprint design, 
+                      followed by any custom configlets after the "------BEGIN SECTION CONFIGLETS------" delimiter. 
+                      The configuration represents the authoritative version that should be running on the device 
+                      to achieve the intended network design and functionality.
+        '404':
+          description: Blueprint or system with specified ID not found, or device not present in the blueprint
+        '401':
+          description: Authentication required - invalid or missing AuthToken
+        '500':
+          description: Internal server error while rendering device configuration or retrieving blueprint data
